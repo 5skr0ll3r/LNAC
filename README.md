@@ -1,0 +1,121 @@
+# LNAC (Link Generator and Audio Compression Tool)
+
+Using Woo-Commerce to distribute digital products and you are
+bored of importing all the links for digital downloadables by hand
+this script allows you to skip this step.
+Just export your products in a csv and supply it to **lnac**
+it will handle download links creation and put them all in a new
+csv, associate covers by name with the products, so if you have uploaded the images 
+but dont want to go to each product and put the image it automatically puts it in the csv,
+and extra feature audio file comprassion using ffmpeg
+
+## Overview
+`lnac` is a Python-based command-line tool designed for:
+- **Generating download links** for audio files stored in a directory.
+- **Compressing audio files** to a standardized 128kbps bitrate.
+- **Associating product covers** with their corresponding audio files.
+- **Generating a CSV file** containing metadata and download links.
+
+---
+
+## Installation
+Ensure you have [Python 3](https://www.python.org/downloads/) installed . Then, install the required dependencies:
+
+```sh
+pip install unidecode
+```
+
+If you want to compress audio files please make sure to have [`ffmpeg` installed](https://www.ffmpeg.org/)
+- [Windows](https://www.ffmpeg.org/download.html#build-windows)
+- [Linux](https://www.ffmpeg.org/download.html#build-linux): `sudo apt install ffmpeg`
+- [MacOs](https://www.ffmpeg.org/download.html#build-mac): `brew install ffmpeg`
+
+
+After installing the dependencies make sure that the script is executable by doing:
+- Windows_CMD: `attrib +x lnac.py`
+- Linux: `chmod +x lnac.py`
+
+## Usage
+```bash
+Usage: ./lnac.py [options]
+```
+## Arguments:
+### Option	Description
+- -d, --dir	Path to the directory containing audio files. (Required)
+- -u --url Cloud/Local server in which the files are stored. Required to generate the links to the files.
+- -j --curl Url where covers for products are stored.
+- -k, --covers	Path to a directory containing cover images.
+- -i, --csv	Path to an existing CSV file to associate with the directory and generate a new CSV with download data.
+- -c, --compress	Enable audio compression (converts to 128kbps).
+- -t, --threads	Number of threads to use for compression (Default: 20).
+
+
+## Features
+### Directory Crawling
+The script scans the specified directory, detecting:
+- Folders representing products.
+- Audio files within these folders.
+- Builds a structured representation of the directory.
+
+### Audio Compression
+When the -c flag is used:
+- The script compresses .mp3 files to 128kbps, 44.1kHz, stereo using ffmpeg.
+- It runs multiple compression jobs in parallel (default: 20 threads).
+
+### CSV Generation
+When the -i flag is used:
+- It reads the provided CSV file.
+- It attempts to match product titles with the product files in the directory.
+- It generates a new CSV containing:
+  - Product metadata.
+  - Download links for audio files.
+
+### Product Cover Association
+When -k is provided:
+- It links product cover images with their corresponding product.
+- The final CSV includes a column for product cover URLs.
+
+## Example Usage:
+
+### 1. Compress Audio Files
+```bash
+./lnac.py -d /path/to/products -u https://example.com/ -c
+```
+The option `-d` is to specify the path to the audio files and `-c` to tell it to compress them
+the compressed files will be moved to a new directory called __compressed_audio_files_128kbps__
+
+### 2. Associate Covers and Generate CSV
+```bash
+./lnac.py -d /path/to/products -u https://example.com/ -j https://example.com/wp-content/uploads/2021/12/ -i products.csv -k /path/to/covers
+```	
+The option `-i` is to specify the path to the csv you want to add the covers and the download links 
+and option `-k` is to specify the directory of the cover images,
+the script will automatically assoiciate the products with the cover images thanks to the
+unique id's they have as a prefix in their names (1,2,3,4....) it will then create links
+both for the downloads and for the covers and insert them into a new copy of the specified csv
+called __new_csv.csv__ 
+
+### 3. Compress with Custom Threads
+```bash
+./lnac.py -d /path/to/products -c -t 60
+```
+The option `-t` is to specify the number of threads you want to run the
+compression with, it's default setting is set to 20 
+
+### 4. All together 
+```bash
+./lnac.py -d /path/to/products -i /path/to/products.csv -k /path/to/covers -ct 60
+```
+
+## Something went wrong?
+When running the script it will create a directory named __.tmp_lnac_std__,
+in this directory you will see files that have to do with how the execution of the program went 
+and some debugging info
+
+### Files:
+__.tmp_lnac_std__:
+  - __empty_folders.lst__: Contains the names of directories that are empty within the specified directory.
+  - __non_mp3_files.lst__: Contains the names of the files that are not of type mp3.
+  - __.tmp_stdout_{worker_id}__: Contains ffmpeg data about the execution of the compression.
+  - __.tmp_stderr_{worker_id}__: Contains any errors generated by ffmpeg during the execution.
+  - __csv_report.log__: If covers cannot be assoiciated with any products it will report it here.
